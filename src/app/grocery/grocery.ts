@@ -1,9 +1,11 @@
 export class Grocery {
+    _id: any | undefined;
     name: string;
-    count: number;
+    quantity: number;
 
-    constructor(name: string, count: number) {
+    constructor(name: string, quantity: number, _id: any | undefined = undefined) {
+        this._id = _id
         this.name = name
-        this.count = count
+        this.quantity = quantity
     }
 }

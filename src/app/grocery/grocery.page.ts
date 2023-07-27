@@ -15,16 +15,26 @@ export class GroceryPage {
   groceries: Observable<Grocery[]> = new Observable()
 
   constructor(public dataService: GroceriesService, public inputDialogService: InputDialogService, private socialSharing: SocialSharing) {
-    this.groceries = this.dataService.getItems().asObservable();
+  }
+
+  ngOnInit() {
+    this.groceries = this.dataService.groceries.asObservable();
+    this.dataService.dataChanged.subscribe((_updated) => {
+      this.dataService.getItems();
+    });
+  }
+
+  ionViewWillEnter(): void {
+    this.dataService.getItems();
   }
 
   async editItem(grocery: Grocery, index: number, listInput: IonItemSliding) {
     let newGrocery = await this.inputDialogService.showItemPrompt('Edit Item', 'Please enter item...', grocery)
-    this.dataService.editItem(newGrocery, index, listInput);
+    this.dataService.editItem(newGrocery, listInput);
   }
 
   async removeItem(grocery: Grocery, index: number, listInput: IonItemSliding) {
-    this.dataService.removeItem(grocery, index, listInput);
+    this.dataService.removeItem(grocery, listInput);
   }
 
   async addItem() {
@@ -36,7 +46,7 @@ export class GroceryPage {
     console.log("Sharing Item: ", grocery);
     this.dataService.close(listInput);
 
-    let message = "Grocery Item - Name: " + grocery.name + " - Quantity: " + grocery.count;
+    let message = "Grocery Item - Name: " + grocery.name + " - Quantity: " + grocery.quantity;
     let subject = "Shared via Groceries app";
 
     this.socialSharing.share(

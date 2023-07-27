@@ -22,9 +22,9 @@ export class InputDialogService {
             value: grocery?.name
           },
           {
-            name: 'count',
-            placeholder: 'Count',
-            value: grocery?.count
+            name: 'quantity',
+            placeholder: 'Quantity',
+            value: grocery?.quantity
           },
         ],
         buttons: [
@@ -38,7 +38,7 @@ export class InputDialogService {
             text: 'Save',
             handler: item => {
               console.log('Saved clicked', item);
-              resolve(new Grocery(item.name, item.count))
+              resolve(new Grocery(item.name, item.quantity, grocery?._id))
             }
           }
         ]

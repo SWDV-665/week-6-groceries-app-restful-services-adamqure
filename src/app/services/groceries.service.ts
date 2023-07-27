@@ -1,10 +1,10 @@
 import { Injectable } from '@angular/core';
-import { BehaviorSubject } from 'rxjs';
+import { BehaviorSubject, Observable, Subject, catchError, map, of, tap } from 'rxjs';
 import { Grocery } from 'src/app/grocery/grocery';
 import { IonItem, ToastController } from '@ionic/angular';
 import { AlertController } from '@ionic/angular';
 import { IonItemSliding } from '@ionic/angular';
-
+import { HttpClient } from "@angular/common/http";
 
 @Injectable({
   providedIn: 'root'
@@ -12,36 +12,95 @@ import { IonItemSliding } from '@ionic/angular';
 export class GroceriesService {
   groceries: BehaviorSubject<Array<Grocery>> = new BehaviorSubject(new Array<Grocery>())
 
-  constructor(public toastCtrl: ToastController, public alertCtrl: AlertController) { 
+  dataChanged: Observable<boolean>;
+  private dataChangeSubject: Subject<boolean>;
+  
+  baseURL = "http://localhost:8080";
+
+  constructor(public toastCtrl: ToastController, public alertCtrl: AlertController, private http: HttpClient) { 
+    this.dataChangeSubject = new Subject<boolean>();
+    this.dataChanged = this.dataChangeSubject.asObservable();
   }
 
-  async editItem(grocery: Grocery, index: number, listInput: IonItemSliding) {
+  async editItem(grocery: Grocery, listInput: IonItemSliding) {
+    console.log("Editing item:", grocery);
     this.close(listInput);
-    var groceryList = this.groceries.getValue();
-    groceryList[index] = grocery;
-    this.groceries.next(groceryList);
+    this.http.put<Grocery[]>(this.baseURL + "/api/groceries/" + grocery._id, grocery).subscribe(res => {
+      console.log(res);
+      if (this.containsErrors(res)) {
+        this.presentError("Failed to Edit Grocery");
+        return;
+      }
+
+      this.dataChangeSubject.next(true);
+    })
   }
 
-  async removeItem(grocery: Grocery, index: number, listInput: IonItemSliding) {
+  async removeItem(grocery: Grocery, listInput: IonItemSliding) {
+    console.log("Removing Item", grocery);
     this.close(listInput);
-    var groceryList = this.groceries.getValue();
-    groceryList.splice(index, 1);
-    this.groceries.next(groceryList);
+    this.http.delete(this.baseURL + "/api/groceries/" + grocery._id).subscribe(res => {
+      console.log(res);
+      if (this.containsErrors(res)) {
+        this.presentError("Failed to Delete Grocery");
+        return;
+      }
+
+      this.dataChangeSubject.next(true);
+    })
   }
 
   getItems() {
-    return this.groceries
+    console.log("Fetching groceries...");
+    this.http.get<Grocery[]>(this.baseURL + "/api/groceries").subscribe(res => {
+      console.log(res);
+      if (this.containsErrors(res)) {
+        this.presentError("Failed to Get Groceries");
+        return;
+      }
+
+      this.groceries.next(res);
+      console.log("Received groceries:", res);
+    });
   }
 
-  addItem(grocery: Grocery) {
+  async addItem(grocery: Grocery) {
     console.log("Adding Item");
-    var groceryList = this.groceries.getValue();
-    groceryList.push(grocery);
-    this.groceries.next(groceryList);
+    this.http.post<Grocery[]>(this.baseURL + "/api/groceries", grocery).subscribe(res => {
+      console.log(res);
+      if (this.containsErrors(res)) {
+        this.presentError("Failed to Add Grocery");
+        return;
+      }
+
+      this.dataChangeSubject.next(true);
+    });
   }
 
   close(listInput: IonItemSliding) {
     console.log("Closing item...")
     listInput.close();
+  }
+
+  private containsErrors(res: any) {
+    return !(res instanceof Array);
+  }
+
+  private async presentError(title: string) {
+    const alert = await this.alertCtrl.create({
+      header: "Error",
+      message: title,
+      buttons: ['OK']
+    });
+
+    await alert.present();
+  }
+}
+
+class Error {
+  _message: string;
+
+  constructor(_message: string) {
+    this._message = _message;
   }
 }
